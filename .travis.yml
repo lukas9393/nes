@@ -1,0 +1,49 @@
+language: rust
+cache: cargo
+rust:
+- stable
+- beta
+- nightly
+os:
+- linux
+- osx
+env:
+  global:
+  - RUST_BACKTRACE=1
+  - CRATES=fin_model,fin_data,fin_iex
+before_install:
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install sdl2; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get update; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get -y install libsdl2-dev; fi
+matrix:
+  fast_finish: true
+  allow_failures:
+  - rust: nightly
+  include:
+  - name: 'Rust: format check'
+    rust: stable
+    install:
+    - rustup component add rustfmt
+    script:
+    - cargo fmt --verbose --all -- --check
+  - name: 'Rust: style check'
+    rust: stable
+    install:
+    - rustup component add clippy
+    script:
+    - cargo clippy --verbose --all -- -D warnings
+script:
+- cargo build --verbose --all
+- cargo test  --verbose --all
+deploy:
+  provider: releases
+  api_key:
+    secure: M1Zu1fSV6Z0PqNQjZGnXNkbHcLiH4f5U27duSJNE/Ryj5dx7z8+LL2Z9f6LMH2E02LU0tMZNF0fsf8GF0D3+jIZi6JvmProJeenN5Uqgi986k16tBppvCe/iSi2kBcklRSXfJDyWtibmN/6TqPEEuKUclg9vi+A96A2x6C9GL3f01sS3o4SbiGsgEnekRLhI0BF/N2nhx0kp9pdY04RRYp8y9UK3soduE3CDqaUjc8M54bpV5pM3h0NPD16YNuyEjUDDKunT9RHcFRt9k2gYA/p4rSzqtRmuM5/ud7ys8R2Rn1/6AF/voagQZmEgkCSlNmUsDP/Yy7d3Z9fuWHzn+xjzF1hbS/qk4IbPT+BnmDT3Nsg8FiG3Cpbm8tuQqQkRfVY1N6zU5K0FWwXSUkcL0UWnvj6GW+f8zI16Pl4lNy5Kf6hobzHoxwfsTgT+nwGkS+eBupr/cWekqOBmJfI3AR9OBCCESLdqavSC9x9tv8riLJDlf07UQRJGbldjJ6/sjtnYogR4+AH0cxyNNW5JKjtAhfuIRTo0m8LHtWgjIPOI/jcrsdgK1NcrmzFfzRmLRCgHjpoFuH7rm1FF0xXlAHd2T7XFQxGeIvUiNwAaVvQK32ZAo99vpI2VWZuknNLdUWZcHGdN7uUuOtJz36UAK+ZzupaNw4pMkeVQqkfeRIs=
+  file: target/release/nes
+  on:
+    tags: true
+    repo: lukas9393/nes
+notifications:
+  email:
+    on_success: never
