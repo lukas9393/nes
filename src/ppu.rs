@@ -96,12 +96,7 @@ pub fn ppu_step(cpu: &mut CPU, ppu: &mut PPU, n_rom: &NROM) {
                     match ppu.cycle % 8 {
                         1 => {
                             if ppu.scanline == 261 {
-                                ppu.ppustatus &= 0b0001_1111;
-
-                                for i in 0..8 {
-                                    ppu.sprite_shifter_pattern_lo[i] = 0;
-                                    ppu.sprite_shifter_pattern_hi[i] = 0;
-                                }
+                                clear_shifters(ppu)
                             }
                             fetch_nt_byte(ppu, n_rom)
                         }
@@ -153,6 +148,15 @@ pub fn ppu_step(cpu: &mut CPU, ppu: &mut PPU, n_rom: &NROM) {
             ppu.frame_complete = true;
             ppu.odd_frame = !ppu.odd_frame;
         }
+    }
+}
+
+fn clear_shifters(ppu: &mut PPU) {
+    ppu.ppustatus &= 0b0001_1111;
+
+    for i in 0..8 {
+        ppu.sprite_shifter_pattern_lo[i] = 0;
+        ppu.sprite_shifter_pattern_hi[i] = 0;
     }
 }
 
@@ -237,7 +241,6 @@ fn render_pixel(ppu: &mut PPU) {
 
 fn load_fg_shifters(ppu: &mut PPU, n_rom: &NROM) {
     for i in 0..ppu.sprite_count {
-        // 8x8 Sprite Mode - The control register determines the pattern table
         let sprite_pattern_addr_lo = if ppu.secondary_oam[i * 4 + 2] & 0x80 == 0 {
             ((ppu.ppuctrl as u16) & 0b0000_1000 << 9)
                 | ((ppu.secondary_oam[i * 4 + 1] as u16) << 4)
@@ -283,7 +286,12 @@ fn fetch_sprites(ppu: &mut PPU) {
     ppu.sprite_count = 0;
     ppu.b_sprite_zero_hit_possible = false;
     for n in 0..64 {
-        let diff = ppu.scanline as isize - ppu.primary_oam[n * 4] as isize;
+        let diff = if ppu.scanline == 261 {
+            (-1) - ppu.primary_oam[n * 4] as isize
+        } else {
+            ppu.scanline as isize - ppu.primary_oam[n * 4] as isize
+        };
+
         let sprite_size = if ppu.ppuctrl & 0b0010_0000 != 0 {
             16
         } else {
